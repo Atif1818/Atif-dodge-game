@@ -1,0 +1,564 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atif: Dodge the Blocks</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom CSS for game elements */
+        body {
+            font-family: 'Inter', sans-serif; /* Using Inter font as per instructions */
+            background-color: #0a0a1a; /* Very dark background for night theme */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh; /* Full viewport height */
+            margin: 0;
+            overflow: hidden; /* Prevent scrolling */
+        }
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #1a1a2a; /* Slightly lighter dark background for container */
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.5); /* Soft shadow */
+            padding: 1.5rem;
+            max-width: 90vw; /* Max width for responsiveness */
+            width: 500px; /* Max width for desktop */
+            box-sizing: border-box;
+        }
+        canvas {
+            background-color: #2a2a3a; /* Canvas background for night sky */
+            border-radius: 0.75rem; /* Rounded corners for canvas */
+            display: block; /* Remove extra space below canvas */
+            border: 2px solid #a0aec0; /* Border around canvas */
+            touch-action: none; /* Prevent default touch actions like scrolling/zooming */
+            width: 100%; /* Make canvas responsive */
+            height: auto; /* Maintain aspect ratio */
+            max-height: 70vh; /* Limit canvas height */
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 1rem;
+            color: #e2e8f0; /* Light text color */
+            font-size: 1.125rem; /* Large text */
+            font-weight: bold;
+        }
+        .game-controls {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .game-button {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            background-image: linear-gradient(to right, #4299e1, #63b3ed); /* Blue gradient */
+            color: white;
+            border: none;
+        }
+        .game-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
+            background-image: linear-gradient(to right, #3182ce, #4299e1);
+        }
+        .game-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .mobile-controls {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 1.5rem;
+            gap: 1rem;
+        }
+
+        .mobile-button {
+            flex: 1;
+            padding: 1.5rem 0; /* Larger touch area */
+            border-radius: 0.75rem;
+            font-size: 2rem; /* Larger icon/text */
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            background-image: linear-gradient(to right, #68d391, #81e6d9); /* Greenish gradient */
+            color: #2d3748;
+            border: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .mobile-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
+            background-image: linear-gradient(to right, #5cb97d, #72d6cb);
+        }
+        .mobile-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Message box styling */
+        .message-box {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            z-index: 100;
+            display: none; /* Hidden by default */
+            border: 2px solid #a0aec0;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+        }
+        .message-box button {
+            margin-top: 1rem;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #4299e1;
+            color: white;
+            border: none;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .message-box button:hover {
+            background-color: #3182ce;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-info">
+            <div id="score">Score: 0</div>
+            <div id="level">Level: 1</div>
+        </div>
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="game-controls">
+            <button id="startButton" class="game-button">Start Game</button>
+            <button id="pauseButton" class="game-button">Pause</button>
+            <button id="restartButton" class="game-button" style="display: none;">Restart</button>
+        </div>
+
+        <div class="mobile-controls">
+            <button id="moveLeftButton" class="mobile-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0z"/>
+                </svg>
+            </button>
+            <button id="moveRightButton" class="mobile-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 0 0 .708L10.293 8l-5.647 5.646a.5.5 0 0 0 .708.708l6-6a.5.5 0 0 0 0-.708l-6-6a.5.5 0 0 0-.708 0z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div id="messageBox" class="message-box">
+        <p id="messageText"></p>
+        <button id="messageBoxButton">OK</button>
+    </div>
+
+    <script>
+        // Get canvas and context
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Get UI elements
+        const scoreDisplay = document.getElementById('score');
+        const levelDisplay = document.getElementById('level');
+        const startButton = document.getElementById('startButton');
+        const pauseButton = document.getElementById('pauseButton');
+        const restartButton = document.getElementById('restartButton');
+        const moveLeftButton = document.getElementById('moveLeftButton');
+        const moveRightButton = document.getElementById('moveRightButton');
+        const messageBox = document.getElementById('messageBox');
+        const messageText = document.getElementById('messageText');
+        const messageBoxButton = document.getElementById('messageBoxButton');
+
+        // Game variables
+        let gameRunning = false;
+        let paused = false;
+        let score = 0;
+        let level = 1;
+        let animationFrameId;
+
+        // Character (Human) properties
+        const atif = {
+            x: 0,
+            y: 0,
+            width: 40,
+            height: 60, // Taller for human character
+            skinColor: '#e0b98a', // Skin tone color
+            shirtColor: '#4CAF50', // Green shirt
+            pantsColor: '#3F51B5', // Blue pants
+            speed: 5 // Movement speed
+        };
+
+        // Block properties
+        const blocks = [];
+        const blockWidth = 30;
+        const blockHeight = 30;
+        let baseBlockSpeed = 2; // Initial block speed
+        let blockSpawnInterval = 1000; // Time in ms between block spawns
+        let lastBlockSpawnTime = 0;
+
+        // Level configurations (18 levels)
+        // Each level increases block speed and/or decreases spawn interval
+        const levelConfigs = [
+            { speedMultiplier: 1.0, spawnIntervalMultiplier: 1.0, scoreToNext: 200 }, // Level 1
+            { speedMultiplier: 1.1, spawnIntervalMultiplier: 0.95, scoreToNext: 400 }, // Level 2
+            { speedMultiplier: 1.2, spawnIntervalMultiplier: 0.9, scoreToNext: 650 },  // Level 3
+            { speedMultiplier: 1.3, spawnIntervalMultiplier: 0.85, scoreToNext: 950 },  // Level 4
+            { speedMultiplier: 1.4, spawnIntervalMultiplier: 0.8, scoreToNext: 1300 }, // Level 5
+            { speedMultiplier: 1.5, spawnIntervalMultiplier: 0.75, scoreToNext: 1700 }, // Level 6
+            { speedMultiplier: 1.6, spawnIntervalMultiplier: 0.7, scoreToNext: 2150 }, // Level 7
+            { speedMultiplier: 1.7, spawnIntervalMultiplier: 0.65, scoreToNext: 2650 }, // Level 8
+            { speedMultiplier: 1.8, spawnIntervalMultiplier: 0.6, scoreToNext: 3200 }, // Level 9
+            { speedMultiplier: 1.9, spawnIntervalMultiplier: 0.55, scoreToNext: 3800 }, // Level 10
+            { speedMultiplier: 2.0, spawnIntervalMultiplier: 0.5, scoreToNext: 4450 }, // Level 11
+            { speedMultiplier: 2.1, spawnIntervalMultiplier: 0.48, scoreToNext: 5150 }, // Level 12
+            { speedMultiplier: 2.2, spawnIntervalMultiplier: 0.46, scoreToNext: 5900 }, // Level 13
+            { speedMultiplier: 2.3, spawnIntervalMultiplier: 0.44, scoreToNext: 6700 }, // Level 14
+            { speedMultiplier: 2.4, spawnIntervalMultiplier: 0.42, scoreToNext: 7550 }, // Level 15
+            { speedMultiplier: 2.5, spawnIntervalMultiplier: 0.40, scoreToNext: 8450 }, // Level 16
+            { speedMultiplier: 2.6, spawnIntervalMultiplier: 0.38, scoreToNext: 9400 }, // Level 17
+            { speedMultiplier: 2.7, spawnIntervalMultiplier: 0.36, scoreToNext: Infinity } // Level 18 (final level)
+        ];
+
+        // --- Game Initialization and Setup ---
+
+        // Function to resize canvas based on container
+        function resizeCanvas() {
+            const container = document.querySelector('.game-container');
+            // Set canvas width to 90% of container width, capped at a max height
+            const newWidth = container.clientWidth * 0.9;
+            const newHeight = Math.min(newWidth * (3 / 4), window.innerHeight * 0.7); // Maintain 4:3 aspect ratio, max 70% viewport height
+            canvas.width = newWidth;
+            canvas.height = newHeight;
+
+            // Adjust Atif's position if canvas size changes significantly
+            atif.x = Math.max(0, Math.min(canvas.width - atif.width, atif.x));
+            atif.y = canvas.height - atif.height - 10; // Keep Atif at the bottom
+        }
+
+        // Initial setup for the game
+        function initializeGame() {
+            resizeCanvas(); // Set initial canvas size
+            atif.x = (canvas.width - atif.width) / 2; // Center Atif horizontally
+            atif.y = canvas.height - atif.height - 10; // Atif at the bottom
+            blocks.length = 0; // Clear all blocks
+            score = 0;
+            level = 1;
+            gameRunning = false;
+            paused = false;
+            updateUI();
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+            drawAtif(); // Draw Atif
+            startButton.style.display = 'inline-block';
+            pauseButton.style.display = 'inline-block';
+            restartButton.style.display = 'none';
+            hideMessageBox();
+        }
+
+        // --- Drawing Functions ---
+
+        // Draw Human Character on the canvas with face, clothes, hands, and legs
+        function drawAtif() {
+            // Draw head (skin tone)
+            ctx.fillStyle = atif.skinColor;
+            ctx.fillRect(atif.x + atif.width * 0.3, atif.y, atif.width * 0.4, atif.height * 0.25); // Head rectangle
+
+            // Draw face features (simple rectangles for eyes and mouth)
+            ctx.fillStyle = '#000000'; // Black for eyes and mouth
+            // Left eye
+            ctx.fillRect(atif.x + atif.width * 0.35, atif.y + atif.height * 0.08, atif.width * 0.08, atif.height * 0.04);
+            // Right eye
+            ctx.fillRect(atif.x + atif.width * 0.57, atif.y + atif.height * 0.08, atif.width * 0.08, atif.height * 0.04);
+            // Mouth
+            ctx.fillRect(atif.x + atif.width * 0.4, atif.y + atif.height * 0.18, atif.width * 0.2, atif.height * 0.03);
+
+
+            // Draw shirt
+            ctx.fillStyle = atif.shirtColor;
+            ctx.fillRect(atif.x + atif.width * 0.1, atif.y + atif.height * 0.25, atif.width * 0.8, atif.height * 0.4);
+
+            // Draw "Atif" on the shirt
+            ctx.fillStyle = '#FFFFFF'; // White text
+            ctx.font = `${atif.width * 0.2}px Arial`; // Adjust font size based on character width
+            ctx.textAlign = 'center';
+            ctx.fillText('Atif', atif.x + atif.width / 2, atif.y + atif.height * 0.48);
+
+            // Draw hands (skin tone)
+            ctx.fillStyle = atif.skinColor;
+            // Left arm/hand
+            ctx.fillRect(atif.x, atif.y + atif.height * 0.35, atif.width * 0.1, atif.height * 0.2);
+            // Right arm/hand
+            ctx.fillRect(atif.x + atif.width * 0.9, atif.y + atif.height * 0.35, atif.width * 0.1, atif.height * 0.2);
+
+            // Draw pants
+            ctx.fillStyle = atif.pantsColor;
+            ctx.fillRect(atif.x + atif.width * 0.1, atif.y + atif.height * 0.65, atif.width * 0.8, atif.height * 0.35);
+
+            // Draw legs (skin tone, extending from pants)
+            ctx.fillStyle = atif.skinColor;
+            // Left leg
+            ctx.fillRect(atif.x + atif.width * 0.2, atif.y + atif.height * 0.85, atif.width * 0.2, atif.height * 0.15);
+            // Right leg
+            ctx.fillRect(atif.x + atif.width * 0.6, atif.y + atif.height * 0.85, atif.width * 0.2, atif.height * 0.15);
+        }
+
+        // Draw a single stone block
+        function drawBlock(block) {
+            ctx.fillStyle = block.color;
+            // Draw a slightly rounded rectangle to resemble a stone
+            ctx.beginPath();
+            ctx.roundRect(block.x, block.y, block.width, block.height, 5); // 5px border radius
+            ctx.fill();
+        }
+
+        // --- Game Logic Functions ---
+
+        // Update score and level display
+        function updateUI() {
+            scoreDisplay.textContent = `Score: ${score}`;
+            levelDisplay.textContent = `Level: ${level}`;
+        }
+
+        // Generate a new block (stone)
+        function generateBlock() {
+            const blockX = Math.random() * (canvas.width - blockWidth);
+            // Generate random grey/brownish color for stones
+            const r = Math.floor(Math.random() * 60) + 60; // 60-119
+            const g = Math.floor(Math.random() * 50) + 50; // 50-99
+            const b = Math.floor(Math.random() * 40) + 40; // 40-79
+            const blockColor = `rgb(${r}, ${g}, ${b})`;
+
+            blocks.push({
+                x: blockX,
+                y: -blockHeight, // Start above the canvas
+                width: blockWidth,
+                height: blockHeight,
+                speed: baseBlockSpeed * levelConfigs[level - 1].speedMultiplier,
+                color: blockColor
+            });
+        }
+
+        // Update block positions and remove off-screen blocks
+        function updateBlocks() {
+            for (let i = blocks.length - 1; i >= 0; i--) {
+                blocks[i].y += blocks[i].speed;
+                // Remove block if it goes off-screen
+                if (blocks[i].y > canvas.height) {
+                    blocks.splice(i, 1);
+                    score += 10; // Increase score for dodging a block
+                }
+            }
+        }
+
+        // Check for collision between Atif and any block
+        function checkCollision() {
+            for (const block of blocks) {
+                if (
+                    atif.x < block.x + block.width &&
+                    atif.x + atif.width > block.x &&
+                    atif.y < block.y + block.height &&
+                    atif.y + atif.height > block.y
+                ) {
+                    gameOver(); // Collision detected, game over
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        // Advance to the next level
+        function advanceLevel() {
+            if (level < levelConfigs.length && score >= levelConfigs[level - 1].scoreToNext) {
+                level++;
+                showMessageBox(`Level ${level} Unlocked!`, 'Continue');
+                // Pause game briefly to show message, then resume
+                pauseGame();
+                // Update block speed and spawn interval based on new level config
+                baseBlockSpeed = 2; // Reset base speed, multiplier will apply
+                blockSpawnInterval = 1000 * levelConfigs[level - 1].spawnIntervalMultiplier;
+            } else if (level === levelConfigs.length && score >= levelConfigs[level - 1].scoreToNext) {
+                // Player has completed all levels
+                gameWin();
+            }
+        }
+
+        // --- Game States ---
+
+        // Start the game
+        function startGame() {
+            if (!gameRunning) {
+                gameRunning = true;
+                paused = false;
+                startButton.style.display = 'none';
+                restartButton.style.display = 'none';
+                pauseButton.textContent = 'Pause';
+                gameLoop();
+            }
+        }
+
+        // Pause the game
+        function pauseGame() {
+            if (gameRunning) {
+                paused = !paused;
+                if (paused) {
+                    cancelAnimationFrame(animationFrameId); // Stop animation
+                    pauseButton.textContent = 'Resume';
+                    showMessageBox('Game Paused', 'Resume');
+                } else {
+                    pauseButton.textContent = 'Pause';
+                    gameLoop(); // Resume animation
+                    hideMessageBox();
+                }
+            }
+        }
+
+        // Game over state
+        function gameOver() {
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId); // Stop animation
+            showMessageBox(`Game Over! Your Score: ${score}`, 'Restart');
+            startButton.style.display = 'none';
+            pauseButton.style.display = 'none';
+            restartButton.style.display = 'inline-block';
+        }
+
+        // Game win state
+        function gameWin() {
+            gameRunning = false;
+            cancelAnimationFrame(animationFrameId); // Stop animation
+            showMessageBox(`Congratulations! You completed all ${levelConfigs.length} levels! Final Score: ${score}`, 'Play Again');
+            startButton.style.display = 'none';
+            pauseButton.style.display = 'none';
+            restartButton.style.display = 'inline-block';
+        }
+
+        // Restart the game
+        function restartGame() {
+            initializeGame();
+            startGame();
+        }
+
+        // --- Message Box Functions ---
+        function showMessageBox(message, buttonText) {
+            messageText.textContent = message;
+            messageBoxButton.textContent = buttonText;
+            messageBox.style.display = 'block';
+        }
+
+        function hideMessageBox() {
+            messageBox.style.display = 'none';
+        }
+
+        // --- Main Game Loop ---
+        function gameLoop(currentTime) {
+            if (!gameRunning || paused) {
+                return;
+            }
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Clear canvas
+
+            // Spawn new blocks
+            if (currentTime - lastBlockSpawnTime > blockSpawnInterval) {
+                generateBlock();
+                lastBlockSpawnTime = currentTime;
+            }
+
+            updateBlocks(); // Update block positions
+            drawAtif();     // Draw Atif
+            blocks.forEach(drawBlock); // Draw all blocks
+
+            checkCollision(); // Check for collisions
+            advanceLevel();   // Check for level progression
+            updateUI();       // Update score and level display
+        }
+
+        // --- Event Listeners ---
+
+        // Desktop keyboard controls
+        document.addEventListener('keydown', (e) => {
+            if (!gameRunning || paused) return;
+            if (e.key === 'ArrowLeft' || e.key === 'a') {
+                atif.x = Math.max(0, atif.x - atif.speed);
+            } else if (e.key === 'ArrowRight' || e.key === 'd') {
+                atif.x = Math.min(canvas.width - atif.width, atif.x + atif.speed);
+            }
+        });
+
+        // Mobile touch controls (buttons)
+        moveLeftButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            if (gameRunning && !paused) {
+                atif.x = Math.max(0, atif.x - atif.speed * 3); // Faster movement for touch
+            }
+        });
+        moveLeftButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+        });
+
+        moveRightButton.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            if (gameRunning && !paused) {
+                atif.x = Math.min(canvas.width - atif.width, atif.x + atif.speed * 3); // Faster movement for touch
+            }
+        });
+        moveRightButton.addEventListener('touchend', (e) => {
+            e.preventDefault();
+        });
+
+        // Game control buttons
+        startButton.addEventListener('click', startGame);
+        pauseButton.addEventListener('click', pauseGame);
+        restartButton.addEventListener('click', restartGame);
+        messageBoxButton.addEventListener('click', () => {
+            hideMessageBox();
+            if (messageBoxButton.textContent === 'Resume') {
+                pauseGame(); // Resume if it was a pause message
+            } else if (messageBoxButton.textContent === 'Restart' || messageBoxButton.textContent === 'Play Again') {
+                restartGame(); // Restart if it was game over/win
+            }
+        });
+
+        // Handle window resizing
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            // Redraw game elements after resize
+            if (gameRunning && !paused) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                drawAtif();
+                blocks.forEach(drawBlock);
+            } else if (!gameRunning) {
+                initializeGame(); // Re-initialize if game not running
+            }
+        });
+
+        // Initialize the game when the window loads
+        window.onload = initializeGame;
+
+    </script>
+</body>
+</html>
